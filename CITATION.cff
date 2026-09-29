@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the manuscript below."
+title: branchless-gf128-simd
+authors:
+  - family-names: Sinha
+    given-names: Parth
+license: Apache-2.0
+repository-code: "https://github.com/sinhaparth5/branchless-gf128-simd"
+preferred-citation:
+  type: article
+  title: "Hardware-Software Co-Design of a Branchless SIMD Vector Extension for Finite Field Arithmetic over GF(2^128)"
+  authors:
+    - family-names: Sinha
+      given-names: Parth
+  journal: "IEEE Transactions on Computers (Under Review)"
+  year: 2026
