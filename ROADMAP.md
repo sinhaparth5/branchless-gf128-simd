@@ -21,9 +21,9 @@ This roadmap combines the manuscript draft (`docs/research_paper.pdf`) and the r
 
 The field is $`\text{GF}(2^{128}) \cong \text{GF}(2)[x]/\langle P(x) \rangle`$ with $`P(x) = x^{128} + x^7 + x^2 + x + 1`$.
 
-- [ ] Split the 255-bit carry-less product into $`c_{lo}`$ (bits 0-127) and $`v_{hi}`$ (bits 128-254), so that $`C_{raw}(x) = c_{lo}(x) + x^{128} \cdot v_{hi}(x)`$.
-- [ ] For each $`j`$ from 0 to 126, compute the residue $`R_j(x) = x^{128+j} \bmod P(x)`$. These residues are the columns of $`\mathbf{M}_{red}`$.
-- [ ] Check that $`r = c_{lo} \oplus (\mathbf{M}_{red} \cdot v_{hi})`$ matches the reference shift-and-XOR reduction.
+- [x] Split the 255-bit carry-less product into $`c_{lo}`$ (bits 0-127) and $`v_{hi}`$ (bits 128-254), so that $`C_{raw}(x) = c_{lo}(x) + x^{128} \cdot v_{hi}(x)`$.
+- [x] For each $`j`$ from 0 to 126, compute the residue $`R_j(x) = x^{128+j} \bmod P(x)`$. These residues are the columns of $`\mathbf{M}_{red}`$.
+- [x] Check that $`r = c_{lo} \oplus (\mathbf{M}_{red} \cdot v_{hi})`$ matches the reference shift-and-XOR reduction.
 - [ ] Complete the reading list below and write up the paper notes it calls for.
 
 ## Phase 2: SIMD kernel (weeks 3-4)
