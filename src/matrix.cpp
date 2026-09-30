@@ -24,4 +24,49 @@ u128 reduce_matrix(const Mred& m, u256 c) {
   return r;
 }
 
+std::uint64_t tile(const Mred& m, int i, int k) {
+  std::uint64_t a = 0;
+  for (int b = 0; b < 8; ++b) {
+    for (int t = 0; t < 8; ++t) {
+      int row = 8 * i + b, col = 8 * k + t;
+      if (col == 127) continue;  // M_red has 127 columns
+      std::uint64_t w = row < 64 ? m[col].lo : m[col].hi;
+      a |= ((w >> (row % 64)) & 1) << (8 * (7 - b) + t);
+    }
+  }
+  return a;
+}
+
+Tiles make_tiles(const Mred& m) { return {tile(m, 0, 0), tile(m, 1, 0)}; }
+
+std::uint8_t affine_byte(std::uint64_t a, std::uint8_t x) {
+  std::uint8_t r = 0;
+  for (int b = 0; b < 8; ++b) {
+    auto row = static_cast<std::uint8_t>(a >> (8 * (7 - b)));
+    r |= static_cast<std::uint8_t>(__builtin_parity(row & x) << b);
+  }
+  return r;
+}
+
+static u128 affine(u128 v, std::uint64_t a) {  // affine_byte on all 16 bytes
+  u128 r{};
+  for (int n = 0; n < 8; ++n) {
+    r.lo |= std::uint64_t{affine_byte(a, static_cast<std::uint8_t>(v.lo >> (8 * n)))} << (8 * n);
+    r.hi |= std::uint64_t{affine_byte(a, static_cast<std::uint8_t>(v.hi >> (8 * n)))} << (8 * n);
+  }
+  return r;
+}
+
+static u128 operator^(u128 x, u128 y) { return {x.lo ^ y.lo, x.hi ^ y.hi}; }
+
+u128 reduce_affine(Tiles t, u256 c) {
+  u128 v = c.hi;
+  u128 d0 = affine(v, t.a0), d1 = affine(v, t.a1);
+  u128 h{d1.hi >> 56, 0};  // byte 15 of d1 is x^128.. again: fold it once more
+  u128 g0 = affine(h, t.a0), g1 = affine(h, t.a1);
+  u128 s = d1 ^ g1;        // a1 output belongs one byte up
+  s = {s.lo << 8, (s.hi << 8) | (s.lo >> 56)};
+  return c.lo ^ d0 ^ g0 ^ s;
+}
+
 }  // namespace gf128

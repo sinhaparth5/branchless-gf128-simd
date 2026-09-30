@@ -28,10 +28,12 @@ The field is $`\text{GF}(2^{128}) \cong \text{GF}(2)[x]/\langle P(x) \rangle`$ w
 
 ## Phase 2: SIMD kernel (weeks 3-4)
 
-- [ ] Carry-less multiplication: use `VPCLMULQDQ` on 512-bit registers to multiply four independent pairs of 64-bit polynomials at once.
-- [ ] Reduction: pack $`\mathbf{M}_{red}`$ into vector registers as $`8 \times 8`$ tiles and chain `GF2P8AFFINEQB` across lanes ($`y = A \cdot x \oplus b`$ per byte).
-- [ ] Write a scalar reference reduction (the loop in equation 6 of the paper) to use as a correctness oracle and a performance baseline.
-- [ ] Set up the CMake build (C++17).
+- [x] Write a scalar reference reduction (the loop in equation 6 of the paper) to use as a correctness oracle and a performance baseline.
+- [x] Set up the CMake build (C++17).
+- [x] Split $`\mathbf{M}_{red}`$ into $`8 \times 8`$ tiles in `GF2P8AFFINEQB` layout and check the tiled reduction with a scalar model of the instruction (`reduce_affine`).
+- [x] Write the kernel `mul4_avx512`: 4 `VPCLMULQDQ` for the 255-bit product and 4 `GF2P8AFFINEQB` for the reduction, 4 multiplications per 512-bit register.
+- [ ] Install Intel SDE and pass `test_kernel` under emulation.
+- [ ] Pass `test_kernel` on real AVX-512/GFNI hardware.
 
 ## Phase 3: Evaluation (weeks 5-6)
 
