@@ -37,9 +37,13 @@ The field is $`\text{GF}(2^{128}) \cong \text{GF}(2)[x]/\langle P(x) \rangle`$ w
 
 ## Phase 3: Evaluation (weeks 5-6)
 
+- [x] Write the measurement tools: `gf128_bench` (throughput, latency, and cycles and branches per op through `perf_event_open` on Linux) and `gf128_ct` (dudect-style Welch t-test with percentile crops). On an Apple M-series machine, `gf128_ct` flags `reduce_ref` and `mul_ref` (|t| > 1000) and passes `reduce_matrix` and `reduce_affine` (|t| < 3) over 10^6 measurements.
+
+The items below need an x86-64 Linux machine with AVX-512/GFNI. Run `gf128_bench`, then `gf128_ct --measurements 10000000` with both `--fixed zero` and `--fixed ones`.
+
 - [ ] Branch behavior: use `perf stat` to confirm zero conditional branches and a 0% branch miss rate in the reduction. The scalar loop makes $`127 \times N`$ conditional checks for $`N`$ inputs, with a miss rate near 50% on random data.
 - [ ] Latency: measure $`T_{exec}`$ and check the paper's claim that the reduction takes 2 to 3 cycles and `VPCLMULQDQ` takes about 3 cycles.
-- [ ] Throughput: measure GB/s against OpenSSL and libsodium.
+- [ ] Throughput: measure GB/s against OpenSSL and libsodium. Their GHASH uses the bit-reflected representation, and neither exposes a bare field multiply, so the comparison has to go through GHASH or GMAC over the same data.
 - [ ] Constant time: run `dudect` with a fixed class (uniform zero/one patterns) and a random class (pseudo-random field elements). Welch's t-test must give $`|t| < 4.5`$ over millions of traces.
 - [ ] Penalty model: fit the pipeline-flush model $`T_{total} = T_{exec} + N_{miss} \cdot \Delta t_{flush}`$ to the scalar baseline.
 

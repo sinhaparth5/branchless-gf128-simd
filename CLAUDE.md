@@ -29,10 +29,14 @@ Supported targets are macOS (arm64 and x86-64), Linux and Windows (MSVC `cl`, cl
 - `src/kernel_avx512.cpp`: `mul4_avx512`, 4 multiplications per zmm. It is the only file compiled with `-mavx512f -mavx512bw -mgfni -mvpclmulqdq` (set per file in CMake; MSVC `cl` needs no flags). Keep ISA flags off every other file so the rest runs on any CPU. Each step mirrors `reduce_affine`, so change the two together. The `mul4_avx512` declaration is behind `#if GF128_AVX512_KERNEL`, so callers must guard on that macro too.
 - `src/cpu.cpp`: `cpu_has_avx512_gfni()`, runtime detection using CPUID and XCR0. On macOS it reads `hw.optional.avx512f` because the OS turns on AVX-512 state lazily. It always returns false off x86.
 - Portability: no compiler builtins (`__builtin_*`) or `__int128` in shared code, because MSVC has neither. Write portable bit tricks instead, as `parity8` in `matrix.cpp` does.
+- `bench/`: Phase 3 tools, built unless `-DGF128_BUILD_BENCH=OFF`. Use a Release build.
+  - `gf128_bench [variant...]` reports ns/op, GB/s (16 bytes per op) and chain latency. On x86 it also reports TSC ticks/op. On Linux it also reports cycles, branches and branch misses per op from `perf_event_open`, counted only over the timed loop (needs `perf_event_paranoid` <= 2).
+  - `gf128_ct [target...] [--measurements N] [--batch B] [--fixed zero|ones]` is the dudect-style leakage test. It exits 1 only when a constant-time target reaches |t| >= 4.5. `reduce_ref` and `mul_ref` are expected to leak; that shows the harness can detect a leak.
+  - To add a variant, add an entry to `kVariants` (bench.cpp) or `kTargets` (ct.cpp). Guard AVX-512 entries with `#if GF128_AVX512_KERNEL` and set `needs_avx512`.
 - `tests/`: plain executables registered with CTest, sharing `tests/check.hpp` (`CHECK`, fixed-seed `rnd128`). No test framework is used. To add a test, create `tests/test_<name>.cpp` and add `<name>` to the `foreach` in `CMakeLists.txt`.
 - `ROADMAP.md`: phases and checklist taken from the manuscript and tracker PDFs in `docs/`.
 
-The `perf`/`dudect` benchmarks and the ARM fallbacks described in the README do not exist yet.
+The ARM NEON/SVE2 fallbacks described in the README do not exist yet. Comparisons against OpenSSL and libsodium have not been done yet either.
 
 ## Constraints implied by the project goal
 

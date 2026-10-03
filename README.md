@@ -46,6 +46,15 @@ ctest --test-dir build -C Release --output-on-failure
 
 This works the same way on Linux, macOS and Windows (Visual Studio, clang-cl or MinGW). The AVX-512 kernel is built only for x86-64 targets. Elsewhere, for example on Apple Silicon, the portable scalar and matrix code still builds and is tested, and the kernel test is reported as skipped.
 
+### Measuring
+
+```bash
+./build/gf128_bench                      # throughput, latency; cycles and branch misses on Linux
+./build/gf128_ct --measurements 10000000 # dudect-style timing-leakage test (|t| < 4.5 passes)
+```
+
+On Windows with Visual Studio the binaries are in `build/Release/`. `gf128_ct` also tests the branching scalar reference and should report it as leaking. That result shows the test can detect a leak on the machine where it runs.
+
 ## Citation
 
 If you use this code, please cite:
