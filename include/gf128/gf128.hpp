@@ -40,8 +40,16 @@ Tiles make_tiles(const Mred& m);
 std::uint8_t affine_byte(std::uint64_t a, std::uint8_t x);  // GF2P8AFFINEQB, imm = 0
 u128 reduce_affine(Tiles t, u256 c);
 
+// True when the CPU and OS support AVX-512F/BW, GFNI and VPCLMULQDQ.
+// Always false on non-x86 targets.
+bool cpu_has_avx512_gfni();
+
+// The build defines GF128_AVX512_KERNEL=1 when it compiles the kernel, which
+// it does only for x86-64 targets.
+#if GF128_AVX512_KERNEL
 // AVX-512 + GFNI + VPCLMULQDQ kernel: r[n] = a[n] * b[n] for n = 0..3.
-// Only call it after checking the CPU supports those instruction sets.
+// Only call it when cpu_has_avx512_gfni() returns true.
 void mul4_avx512(Tiles t, const u128* a, const u128* b, u128* r);
+#endif
 
 }  // namespace gf128

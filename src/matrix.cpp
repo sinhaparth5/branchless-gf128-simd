@@ -39,11 +39,18 @@ std::uint64_t tile(const Mred& m, int i, int k) {
 
 Tiles make_tiles(const Mred& m) { return {tile(m, 0, 0), tile(m, 1, 0)}; }
 
+static unsigned parity8(unsigned x) {  // portable __builtin_parity, no branches
+  x ^= x >> 4;
+  x ^= x >> 2;
+  x ^= x >> 1;
+  return x & 1;
+}
+
 std::uint8_t affine_byte(std::uint64_t a, std::uint8_t x) {
   std::uint8_t r = 0;
   for (int b = 0; b < 8; ++b) {
     auto row = static_cast<std::uint8_t>(a >> (8 * (7 - b)));
-    r |= static_cast<std::uint8_t>(__builtin_parity(row & x) << b);
+    r |= static_cast<std::uint8_t>(parity8(row & x) << b);
   }
   return r;
 }

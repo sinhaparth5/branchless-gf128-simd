@@ -10,13 +10,15 @@ Branchless, constant-time vector acceleration of GF(2^128) finite field arithmet
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-ctest --test-dir build --output-on-failure      # all tests
-ctest --test-dir build -R reference             # one test by name
-cmake -B build -DGF128_SDE=/path/to/sde64       # run test_kernel under Intel SDE
+cmake --build build -j --config Release        # --config matters for multi-config generators (Visual Studio)
+ctest --test-dir build -C Release --output-on-failure   # all tests
+ctest --test-dir build -C Release -R reference           # one test by name
+cmake -B build -DGF128_SDE=/path/to/sde64      # run test_kernel under Intel SDE (sde.exe on Windows)
 ```
 
-This machine has no AVX-512/GFNI. `test_kernel` returns 77 (reported as skipped) unless it runs on such a CPU or under SDE.
+Supported targets are macOS (arm64 and x86-64), Linux and Windows (MSVC `cl`, clang-cl, MinGW). CMake works out the target arch from `CMAKE_OSX_ARCHITECTURES`, then MSVC's `CMAKE_CXX_COMPILER_ARCHITECTURE_ID`, then `CMAKE_SYSTEM_PROCESSOR`. It builds `kernel_avx512.cpp` and defines `GF128_AVX512_KERNEL=1` (PUBLIC) only for x86-64. You can override this with `-DGF128_AVX512=OFF`. A macOS universal build (`arm64;x86_64`) leaves the kernel out.
+
+`test_kernel` returns 77, which CTest reports as skipped, in two cases: when the kernel isn't built (non-x86), and when `cpu_has_avx512_gfni()` is false (unless the test runs under SDE). The project's own dev machine is an arm64 Mac, so the kernel never runs there. `test_affine` is the closest local check because it tests `reduce_affine`, the byte-by-byte model of the kernel.
 
 ## Layout
 
@@ -24,7 +26,9 @@ This machine has no AVX-512/GFNI. `test_kernel` returns 77 (reported as skipped)
 - `src/reference.cpp`: scalar shift-and-XOR `clmul_ref`/`reduce_ref`. This version branches on data on purpose. It is the correctness check and performance baseline for the SIMD kernel, so never call it from constant-time code.
 - `src/matrix.cpp`: `make_mred` builds the 127 columns of M_red (x^(128+j) mod P) and `reduce_matrix` computes `c_lo ^ M_red*v_hi` with masks instead of branches. This is the portable form the SIMD kernel must match.
   It also has `tile`/`make_tiles` (8x8 tiles of M_red in GF2P8AFFINEQB qword layout, where byte 7-b is the row for output bit b), `affine_byte` (a scalar model of the instruction), and `reduce_affine` (the kernel's exact steps done byte by byte). For this P(x) only two tile diagonals are nonzero (`a0`, `a1`), plus one extra fold of byte 15.
-- `src/kernel_avx512.cpp`: `mul4_avx512`, 4 multiplications per zmm. It is the only file compiled with `-mavx512f -mavx512bw -mgfni -mvpclmulqdq` (set per file in CMake). Keep ISA flags off every other file so the rest runs on any x86-64. Each step mirrors `reduce_affine`, so change the two together.
+- `src/kernel_avx512.cpp`: `mul4_avx512`, 4 multiplications per zmm. It is the only file compiled with `-mavx512f -mavx512bw -mgfni -mvpclmulqdq` (set per file in CMake; MSVC `cl` needs no flags). Keep ISA flags off every other file so the rest runs on any CPU. Each step mirrors `reduce_affine`, so change the two together. The `mul4_avx512` declaration is behind `#if GF128_AVX512_KERNEL`, so callers must guard on that macro too.
+- `src/cpu.cpp`: `cpu_has_avx512_gfni()`, runtime detection using CPUID and XCR0. On macOS it reads `hw.optional.avx512f` because the OS turns on AVX-512 state lazily. It always returns false off x86.
+- Portability: no compiler builtins (`__builtin_*`) or `__int128` in shared code, because MSVC has neither. Write portable bit tricks instead, as `parity8` in `matrix.cpp` does.
 - `tests/`: plain executables registered with CTest, sharing `tests/check.hpp` (`CHECK`, fixed-seed `rnd128`). No test framework is used. To add a test, create `tests/test_<name>.cpp` and add `<name>` to the `foreach` in `CMakeLists.txt`.
 - `ROADMAP.md`: phases and checklist taken from the manuscript and tracker PDFs in `docs/`.
 

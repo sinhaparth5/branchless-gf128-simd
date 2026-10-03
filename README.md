@@ -30,8 +30,8 @@ The native AVX-512/GFNI kernel needs a processor with both instruction sets:
 
 ### Prerequisites
 
-- GCC 11+ or Clang 12+
-- CMake 3.18+
+- GCC 11+, Clang 12+, or Visual Studio 2022 (MSVC or clang-cl)
+- CMake 3.20+
 - A Linux kernel with `perf_event_open` access
 
 ### Compiling
@@ -39,10 +39,12 @@ The native AVX-512/GFNI kernel needs a processor with both instruction sets:
 ```bash
 git clone https://github.com/sinhaparth5/branchless-gf128-simd.git
 cd branchless-gf128-simd
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j --config Release
+ctest --test-dir build -C Release --output-on-failure
 ```
+
+This works the same way on Linux, macOS and Windows (Visual Studio, clang-cl or MinGW). The AVX-512 kernel is built only for x86-64 targets. Elsewhere, for example on Apple Silicon, the portable scalar and matrix code still builds and is tested, and the kernel test is reported as skipped.
 
 ## Citation
 

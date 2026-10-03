@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.20)
 project(branchless_gf128_simd LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -6,12 +6,42 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(gf128 src/reference.cpp src/matrix.cpp src/kernel_avx512.cpp)
-# Only the kernel gets the ISA flags, so everything else still runs on any x86-64.
-set_source_files_properties(src/kernel_avx512.cpp PROPERTIES
-  COMPILE_OPTIONS "-mavx512f;-mavx512bw;-mgfni;-mvpclmulqdq")
+add_library(gf128 src/reference.cpp src/matrix.cpp src/cpu.cpp)
 target_include_directories(gf128 PUBLIC include)
-target_compile_options(gf128 PRIVATE -Wall -Wextra -Wpedantic)
+if(MSVC)
+  target_compile_options(gf128 PRIVATE /W4)
+else()
+  target_compile_options(gf128 PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# The AVX-512 kernel is built only for x86-64 targets. A macOS universal build
+# (CMAKE_OSX_ARCHITECTURES="arm64;x86_64") leaves it out.
+if(CMAKE_OSX_ARCHITECTURES)
+  set(GF128_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+elseif(MSVC AND CMAKE_CXX_COMPILER_ARCHITECTURE_ID)
+  set(GF128_ARCH "${CMAKE_CXX_COMPILER_ARCHITECTURE_ID}")
+else()
+  set(GF128_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+string(TOLOWER "${GF128_ARCH}" GF128_ARCH)
+if(GF128_ARCH MATCHES "^(x86_64|amd64|x64)$")
+  set(GF128_X86_64 ON)
+else()
+  set(GF128_X86_64 OFF)
+endif()
+option(GF128_AVX512 "Build the AVX-512/GFNI kernel" ${GF128_X86_64})
+
+if(GF128_AVX512)
+  target_sources(gf128 PRIVATE src/kernel_avx512.cpp)
+  target_compile_definitions(gf128 PUBLIC GF128_AVX512_KERNEL=1)
+  # Only the kernel gets the ISA flags, so everything else still runs on any
+  # x86-64. MSVC's cl allows the intrinsics without flags; clang-cl needs them.
+  if(NOT (MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"))
+    set_source_files_properties(src/kernel_avx512.cpp PROPERTIES
+      COMPILE_OPTIONS "-mavx512f;-mavx512bw;-mgfni;-mvpclmulqdq")
+  endif()
+endif()
+message(STATUS "gf128: target arch '${GF128_ARCH}', AVX-512 kernel ${GF128_AVX512}")
 
 include(CTest)
 if(BUILD_TESTING)
